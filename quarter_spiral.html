@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Taiji Spiral Animation - Growing Spacing</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #888; /* grey background */
+      overflow: hidden;
+      height: 100%;
+    }
+    canvas {
+      display: block;
+      margin: auto;
+      background: #888;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let centerX, centerY;
+    
+    // Responsive canvas: make a square canvas with height equal to the window height
+    function resizeCanvas() {
+      canvas.width = window.innerHeight;
+      canvas.height = window.innerHeight;
+      centerX = canvas.width / 2;
+      centerY = canvas.height / 2;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Spiral parameters
+    const maxTheta = 10 * Math.PI;    // Maximum angle for drawing the spiral
+    const baseSpacing = 1.618;         // Base spacing (approx. the golden ratio)
+    const growthFactor = 0.4;         // Additional spacing that grows with theta
+    const totalDuration = 5000;       // Duration of one complete cycle (milliseconds)
+
+    // Draws a spiral with an angular offset and a specified stroke color.
+    // The radius increases as r = (baseSpacing + growthFactor * theta) * theta,
+    // resulting in wider spacing between loops as theta increases.
+    function drawSpiral(offset, currentTheta, color) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      let firstPoint = true;
+      for (let theta = 0; theta <= currentTheta; theta += 0.1) {
+        // The radial distance increases non-linearly:
+        const r = (baseSpacing + growthFactor * theta) * theta;
+        const x = centerX + r * Math.cos(theta + offset);
+        const y = centerY + r * Math.sin(theta + offset);
+        if (firstPoint) {
+          ctx.moveTo(x, y);
+          firstPoint = false;
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.stroke();
+    }
+
+    // Animation loop
+    let startTime = null;
+    function animate(timestamp) {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      // Compute the progress within the cycle (0 to 1)
+      const progress = (elapsed % totalDuration) / totalDuration;
+      const currentTheta = progress * maxTheta;
+
+      // Clear the canvas for redrawing
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw the two spirals:
+      // White spiral starting at offset 0 radians
+      drawSpiral(0, currentTheta, "#fff");
+      // Black spiral starting at offset π/2 (quarter-circle apart)
+      drawSpiral(Math.PI / 2, currentTheta, "#000");
+
+      requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
