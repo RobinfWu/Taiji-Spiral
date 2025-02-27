@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fibonacci Spiral Animation - Mixed Effects (Centered)</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #888; /* grey background */
+      overflow: hidden;
+      height: 100%;
+      position: relative;
+    }
+    /* Center both canvases in the viewport */
+    canvas {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: transparent;
+    }
+    /* White spiral canvas below */
+    #canvasWhite {
+      z-index: 1;
+    }
+    /* Black spiral canvas on top */
+    #canvasBlack {
+      z-index: 2;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvasWhite"></canvas>
+  <canvas id="canvasBlack"></canvas>
+  <script>
+    // Get both canvases and contexts.
+    const canvasWhite = document.getElementById('canvasWhite');
+    const ctxWhite = canvasWhite.getContext('2d');
+    const canvasBlack = document.getElementById('canvasBlack');
+    const ctxBlack = canvasBlack.getContext('2d');
+
+    let centerX, centerY;
+    
+    // Resize both canvases to a square based on the window height.
+    function resizeCanvas() {
+      const size = window.innerHeight;
+      canvasWhite.width = size;
+      canvasWhite.height = size;
+      canvasBlack.width = size;
+      canvasBlack.height = size;
+      centerX = size / 2;
+      centerY = size / 2;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Fibonacci spiral parameters
+    const phi = 1.61803398875; // Golden ratio
+    const b = (2 / Math.PI) * Math.log(phi); // b such that a quarter turn multiplies r by φ
+    const s = 1; // Scaling constant for the spiral
+    const speed = 0.005; // Angular speed (radians per millisecond)
+    const desiredLineWidth = 5; // Base line width in pixels for white spiral
+    const maxThetaCycle = 25; // Maximum theta value for one cycle (in radians)
+    const cycleDuration = maxThetaCycle / speed; // Duration of one cycle in milliseconds
+
+    // Draw a Fibonacci spiral on the provided context.
+    // For white spirals, we apply glow; for black spirals (color "#000"), no glow is applied.
+    function drawSpiral(ctx, offset, currentTheta, color) {
+      ctx.strokeStyle = color;
+      if (color === "#000") {
+         // Remove glow for black spiral.
+         ctx.shadowBlur = 0;
+      } else {
+         // Apply glow for non-black spiral.
+         ctx.shadowColor = color;
+         ctx.shadowBlur = 16;
+      }
+
+      ctx.beginPath();
+      let firstPoint = true;
+      for (let theta = 0; theta <= currentTheta; theta += 0.1) {
+        const r = s * (Math.exp(b * theta) - 1);
+        const x = r * Math.cos(theta + offset);
+        const y = r * Math.sin(theta + offset);
+        if (firstPoint) {
+          ctx.moveTo(x, y);
+          firstPoint = false;
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.stroke();
+      // Reset shadow settings after drawing.
+      ctx.shadowBlur = 0;
+    }
+
+    let startTime = null;
+    function animate(timestamp) {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      // Cycle theta between 0 and maxThetaCycle.
+      const theta = speed * (elapsed % cycleDuration);
+      
+      // Compute maximum radius and corresponding scale factor.
+      const rMax = s * (Math.exp(b * theta) - 1);
+      let scale = 1;
+      if (rMax > 0.001) {
+        scale = (canvasWhite.height / 2 * 0.9) / rMax;
+      }
+      
+      // --- White Spiral with Motion Blur ---
+      // Instead of a full clear, paint a semi-transparent rectangle for a trailing effect.
+      ctxWhite.fillStyle = "rgba(136,136,136,0.1)";
+      ctxWhite.fillRect(0, 0, canvasWhite.width, canvasWhite.height);
+      
+      ctxWhite.save();
+      ctxWhite.translate(centerX, centerY);
+      ctxWhite.scale(scale, scale);
+      ctxWhite.lineWidth = desiredLineWidth / scale;
+      ctxWhite.globalCompositeOperation = "lighter";
+      // White spiral (offset 0) with glow.
+      drawSpiral(ctxWhite, 0, theta, "#fff");
+      ctxWhite.restore();
+      
+      // --- Black Spiral without Motion Blur ---
+      // Fully clear the black canvas so no trailing remains.
+      ctxBlack.clearRect(0, 0, canvasBlack.width, canvasBlack.height);
+      
+      ctxBlack.save();
+      ctxBlack.translate(centerX, centerY);
+      ctxBlack.scale(scale, scale);
+      // Increase line width for the black spiral; here we double it.
+      ctxBlack.lineWidth = (desiredLineWidth * 2) / scale;
+      ctxBlack.globalCompositeOperation = "lighter";
+      // Black spiral (offset π) without glow.
+      drawSpiral(ctxBlack, Math.PI, theta, "#000");
+      ctxBlack.restore();
+      
+      requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
